@@ -18,7 +18,8 @@ CFLAGS = -m32 -ffreestanding -fno-builtin -fno-pic -nostdlib -O2 -Wall
 # -T boot/linker.ld → usa nosso script
 LFLAGS = -m elf_i386 -T boot/linker.ld
 
-OBJ = boot/entry.o kernel/main.o
+
+OBJ = boot/entry.o kernel/main.o kernel/cpu/gdt.o kernel/cpu/idt.o kernel/cpu/pic.o kernel/teclado.o
 
 # Alvo padrao: compila tudo e gera a ISO
 all: SpaceOS.iso
@@ -27,7 +28,21 @@ all: SpaceOS.iso
 boot/entry.o: boot/entry.asm
 	$(NASM) -f elf32 boot/entry.asm -o boot/entry.o
 
-# Compila o C → gera arquivo objeto ELF 32-bit
+
+## Compila o C
+kernel/cpu/idt.o: kernel/cpu/idt.c
+	$(CC) $(CFLAGS) -c kernel/cpu/idt.c -o kernel/cpu/idt.o
+
+kernel/cpu/gdt.o: kernel/cpu/gdt.c
+	$(CC) $(CFLAGS) -c kernel/cpu/gdt.c -o kernel/cpu/gdt.o
+
+kernel/cpu/pic.o: kernel/cpu/pic.c
+	$(CC) $(CFLAGS) -c kernel/cpu/pic.c -o kernel/cpu/pic.o
+
+kernel/teclado.o: kernel/teclado.c
+	$(CC) $(CFLAGS) -c kernel/teclado.c -o kernel/teclado.o
+
+# Compila o main C
 kernel/main.o: kernel/main.c
 	$(CC) $(CFLAGS) -c kernel/main.c -o kernel/main.o
 

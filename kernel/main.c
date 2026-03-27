@@ -3,6 +3,13 @@
 #define VGA_ROWS 25
 #define COLOR 0x0F /* 0=fundo preto, F=texto branco */
 
+//imports
+#include "cpu/gdt.h"
+#include "cpu/idt.h"
+#include "cpu/pic.h"
+#include "teclado.h"
+
+
 //ponteiro para o buffer VGA
 static unsigned short *vga = (unsigned short *)VGA_BASE;
 
@@ -22,6 +29,20 @@ void clean_screen() {
 
 // escreve um caractere na tela
 void write_char(char c) {
+    //backspace
+    if (c == '\b') {
+        if (col > 0) {
+            col--;
+        } else if (lin > 0){
+            lin--;
+            col = VGA_COLS - 1;
+        }
+
+        int pos = lin * VGA_COLS + col;
+        vga[pos] = (unsigned short)(' ' | (COLOR << 8));
+        return;
+    }
+
     if (c == '\n') {
         col = 0;
         lin++;
@@ -57,17 +78,32 @@ void write(const char *s) {
 void kernel_main() {
     clean_screen();
 
-    write("hello, world!");
+    write("SpaceOS v0.1 - Bare Metal\n");
     write("=================================\n");
-    write("  MeuOS v0.1 - Bare Metal\n");
-    write("=================================\n");
-    write("\n");
-    write("Kernel inicializado.\n");
-    write("VGA text mode funcionando.\n");
-    write("\n");
-    write("Proximo passo: teclado e interrupcoes.\n");
+    write("Teclado: inicializando...\n");
 
-    /* O OS nao pode retornar — fica aqui para sempre */
-    while (1) {}
+    gdt_init();           /* GDT PRIMEIRO — sempre */
+    write("GDT ok\n");
+
+    idt_init();          /* monta a tabela de interrupcoes */
+    write("IDT ok\n");
+
+    pic_init(); /* configura o chip de interrupcoes */
+    write("PIC ok\n");
+
+    teclado_init(); /* registra o handler do teclado */
+    write("Teclado ok\n");
+    /* Habilita interrupcoes na CPU — sem isso nada funciona */
+    __asm__ volatile ("sti");
+
+    write("Teclado pronto! Digite algo:\n\n");
+
+    /* Loop principal — agora o OS reage ao teclado */
+    while (1) {
+        char c = teclado_ultimo_char();
+        if (c) {
+            write_char(c);
+        }
+    }
 
 }
