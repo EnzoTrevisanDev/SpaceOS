@@ -8,6 +8,7 @@
 #include "cpu/idt.h"
 #include "cpu/pic.h"
 #include "teclado.h"
+#include "shell/shell.h"
 
 
 //ponteiro para o buffer VGA
@@ -48,6 +49,7 @@ void write_char(char c) {
         lin++;
         return;
     }
+    
 
     // calculate where the memory should find the VGA char should go
     int pos = lin * VGA_COLS + col;
@@ -97,13 +99,14 @@ void kernel_main() {
     __asm__ volatile ("sti");
 
     write("Teclado pronto! Digite algo:\n\n");
-
+    /* Entra na shell — nunca retorna */
+    shell_init();
     /* Loop principal — agora o OS reage ao teclado */
-    while (1) {
-        char c = teclado_ultimo_char();
-        if (c) {
-            write_char(c);
-        }
-    }
+    //while (1) {
+    //    char c = teclado_ultimo_char();
+    //    if (c) {
+    //        write_char(c);
+    //   }
+    //}
 
 }

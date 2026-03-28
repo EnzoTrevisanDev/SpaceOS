@@ -19,8 +19,10 @@ CFLAGS = -m32 -ffreestanding -fno-builtin -fno-pic -nostdlib -O2 -Wall
 LFLAGS = -m elf_i386 -T boot/linker.ld
 
 
-OBJ = boot/entry.o kernel/main.o kernel/cpu/gdt.o kernel/cpu/idt.o kernel/cpu/pic.o kernel/teclado.o
 
+OBJ = boot/entry.o kernel/main.o kernel/cpu/gdt.o kernel/cpu/idt.o \
+      kernel/cpu/pic.o kernel/teclado.o \
+      kernel/shell/shell.o kernel/shell/comandos.o
 # Alvo padrao: compila tudo e gera a ISO
 all: SpaceOS.iso
 
@@ -42,6 +44,11 @@ kernel/cpu/pic.o: kernel/cpu/pic.c
 kernel/teclado.o: kernel/teclado.c
 	$(CC) $(CFLAGS) -c kernel/teclado.c -o kernel/teclado.o
 
+kernel/shell/shell.o: kernel/shell/shell.c
+	$(CC) $(CFLAGS) -c kernel/shell/shell.c -o kernel/shell/shell.o
+
+kernel/shell/comandos.o: kernel/shell/comandos.c
+	$(CC) $(CFLAGS) -c kernel/shell/comandos.c -o kernel/shell/comandos.o
 # Compila o main C
 kernel/main.o: kernel/main.c
 	$(CC) $(CFLAGS) -c kernel/main.c -o kernel/main.o
