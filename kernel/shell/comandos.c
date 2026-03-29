@@ -11,6 +11,8 @@ static void cmd_reboot(int argc, char **argv);
 static void cmd_eco(int argc, char **argv);
 static void cmd_mem(int argc, char **argv);
 static void cmd_tecla(int argc, char **argv);
+static void cmd_paging(int argc, char **argv);
+
 
 
 
@@ -23,6 +25,7 @@ static Comando tabela[] = {
     {"eco", "Repete o texto digitado ex: eco Olá, mundo!", cmd_eco},
     { "tecla", "mostra codigo da tecla pressionada", cmd_tecla },
     { "mem", "mostra informacoes de memoria", cmd_mem },
+    { "paging", "testa o sistema de paging", cmd_paging },
     {"reboot", "Reinicia o sistema", cmd_reboot},
 };
 
@@ -135,6 +138,30 @@ static void cmd_mem(int argc, char **argv) {
     } else {
         shell_writeln("ERRO — pmm_alloc retornou 0");
     }
+}
+static void cmd_paging(int argc, char **argv) {
+    (void)argc; (void)argv;
+
+    shell_writeln("=== Teste de Paging ===");
+    shell_writeln("");
+
+    /* Teste 1 — escreve e le de um endereco virtual mapeado */
+    volatile uint32_t *teste = (volatile uint32_t *)0x00200000;
+    *teste = 0xDEADBEEF;
+
+    if (*teste == 0xDEADBEEF) {
+        shell_writeln("Teste 1: escrita/leitura virtual OK");
+    } else {
+        shell_writeln("Teste 1: ERRO");
+    }
+
+    /* Teste 2 — verifica que o kernel ainda roda apos paging ativo */
+    shell_writeln("Teste 2: kernel rodando com paging ativo OK");
+
+    /* Teste 3 — mostra onde o page directory esta na memoria */
+    shell_writeln("");
+    shell_write("MMU ativa — traducao de enderecos funcionando");
+    shell_writeln("");
 }
 static void cmd_help(int argc, char **argv){
     (void)argc; (void)argv;

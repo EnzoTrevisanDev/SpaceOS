@@ -10,6 +10,7 @@
 #include "teclado.h"
 #include "shell/shell.h"
 #include "mem/pmm.h"
+#include "mem/paging.h"
 
 
 //ponteiro para o buffer VGA
@@ -103,17 +104,16 @@ void kernel_main(void) {
 
     pmm_init(multiboot_ptr);
     write("PMM ok\n");
-    
 
-    write("Teclado pronto! Digite algo:\n\n");
+    // registra o page fault handler na IDT - interrupcao 14
+    extern void page_fault_asm(void);
+    extern void idt_set(uint8_t, uint32_t, uint16_t, uint8_t);
+    idt_set(14, (uint32_t)page_fault_asm, 0x08, 0x8E);
+
+    paging_init();
+    write("Paging ok!");
+    
     /* Entra na shell — nunca retorna */
     shell_init();
-    /* Loop principal — agora o OS reage ao teclado */
-    //while (1) {
-    //    char c = teclado_ultimo_char();
-    //    if (c) {
-    //        write_char(c);
-    //   }
-    //}
 
 }

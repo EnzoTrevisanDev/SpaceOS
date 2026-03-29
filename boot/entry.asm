@@ -4,6 +4,8 @@
 [GLOBAL teclado_handler_asm]
 [EXTERN teclado_handler]
 [GLOBAL multiboot_ptr]
+[GLOBAL page_fault_asm]
+[EXTERN page_fault_handler]
 
 
 ; --- Multiboot ---
@@ -42,6 +44,12 @@ teclado_handler_asm:
     pushad
     call teclado_handler
     popad
+    iret
+page_fault_asm:
+    pushad
+    call page_fault_handler
+    popad
+    add esp, 4 ; remove o error code que o CPU empurrou
     iret
 
 ; --- Deve ficar por ultimo, fora do .text ---
