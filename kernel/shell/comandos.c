@@ -11,6 +11,7 @@ static void cmd_reboot(int argc, char **argv);
 static void cmd_eco(int argc, char **argv);
 static void cmd_mem(int argc, char **argv);
 static void cmd_tecla(int argc, char **argv);
+static void cmd_heap(int argc, char **argv);
 static void cmd_paging(int argc, char **argv);
 
 
@@ -26,6 +27,7 @@ static Comando tabela[] = {
     { "tecla", "mostra codigo da tecla pressionada", cmd_tecla },
     { "mem", "mostra informacoes de memoria", cmd_mem },
     { "paging", "testa o sistema de paging", cmd_paging },
+    { "heap", "testa kmalloc e kfree", cmd_heap },
     {"reboot", "Reinicia o sistema", cmd_reboot},
 };
 
@@ -163,6 +165,57 @@ static void cmd_paging(int argc, char **argv) {
     shell_write("MMU ativa — traducao de enderecos funcionando");
     shell_writeln("");
 }
+
+static void cmd_heap(int argc, char **argv) {
+    (void)argc; (void)argv;
+
+    shell_writeln("=== Teste kmalloc/kfree ===");
+    shell_writeln("");
+
+    extern void *kmalloc(uint32_t);
+    extern void  kfree(void *);
+
+    /* Aloca 3 blocos */
+    uint32_t *a = kmalloc(32);
+    uint32_t *b = kmalloc(64);
+    uint32_t *c = kmalloc(128);
+
+    if (a && b && c) {
+        shell_writeln("kmalloc(32)  OK");
+        shell_writeln("kmalloc(64)  OK");
+        shell_writeln("kmalloc(128) OK");
+    } else {
+        shell_writeln("ERRO — kmalloc retornou NULL");
+        return;
+    }
+
+    /* Escreve e le nos blocos */
+    *a = 0xAAAA;
+    *b = 0xBBBB;
+    *c = 0xCCCC;
+
+    if (*a == 0xAAAA && *b == 0xBBBB && *c == 0xCCCC) {
+        shell_writeln("Escrita/leitura nos blocos OK");
+    } else {
+        shell_writeln("ERRO — dados corrompidos");
+        return;
+    }
+
+    /* Libera e realoca */
+    kfree(b);
+    uint32_t *d = kmalloc(64);
+    if (d) {
+        shell_writeln("kfree + realloc OK");
+        shell_writeln("");
+        shell_writeln("kmalloc/kfree funcionando!");
+        kfree(a);
+        kfree(c);
+        kfree(d);
+    } else {
+        shell_writeln("ERRO — kfree nao liberou corretamente");
+    }
+}
+
 static void cmd_help(int argc, char **argv){
     (void)argc; (void)argv;
     shell_writeln("Comandos disponiveis");
