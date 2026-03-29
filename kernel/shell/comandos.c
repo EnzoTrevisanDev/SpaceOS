@@ -9,6 +9,7 @@ static void cmd_info(int argc, char **argv);
 static void cmd_cor(int argc, char **argv);
 static void cmd_reboot(int argc, char **argv);
 static void cmd_eco(int argc, char **argv);
+static void cmd_mem(int argc, char **argv);
 static void cmd_tecla(int argc, char **argv);
 
 
@@ -21,6 +22,7 @@ static Comando tabela[] = {
     {"cor", "Altera a cor do texto ex: cor 10", cmd_cor},
     {"eco", "Repete o texto digitado ex: eco Olá, mundo!", cmd_eco},
     { "tecla", "mostra codigo da tecla pressionada", cmd_tecla },
+    { "mem", "mostra informacoes de memoria", cmd_mem },
     {"reboot", "Reinicia o sistema", cmd_reboot},
 };
 
@@ -59,7 +61,7 @@ static void cmd_tecla(int argc, char **argv) {
     shell_writeln("Pressione uma tecla (ESC para sair):");
 
     extern char teclado_ultimo_char(void);
-    //extern uint8_t teclado_ultimo_scancode(void);
+    extern uint8_t teclado_ultimo_scancode(void);
 
     while (1) {
         char c = teclado_ultimo_char();
@@ -81,6 +83,57 @@ static void cmd_tecla(int argc, char **argv) {
 
         /* ESC = 0x1B sai do modo debug */
         if (v == 27) break;
+    }
+}
+static void cmd_mem(int argc, char **argv) {
+    (void)argc; (void)argv;
+
+    extern uint32_t pmm_livres(void);
+    extern uint32_t pmm_total(void);
+
+    uint32_t livres = pmm_livres();
+    uint32_t total  = pmm_total();
+    uint32_t usadas = total - livres;
+
+    shell_writeln("=== Memoria do SpaceOS ===");
+    shell_writeln("");
+    shell_write("Paginas totais : "); shell_write_num(total);   shell_writeln("");
+    shell_write("Paginas livres : "); shell_write_num(livres);  shell_writeln("");
+    shell_write("Paginas usadas : "); shell_write_num(usadas);  shell_writeln("");
+    shell_writeln("");
+    shell_write("RAM total  : "); shell_write_num(total * 4);   shell_write(" KB"); shell_writeln("");
+    shell_write("RAM livre  : "); shell_write_num(livres * 4);  shell_write(" KB"); shell_writeln("");
+    shell_write("RAM usada  : "); shell_write_num(usadas * 4);  shell_write(" KB"); shell_writeln("");
+    shell_writeln("");
+
+    /* testa alloc e free */
+    shell_write("Teste alloc: ");
+    extern uint32_t pmm_alloc(void);
+    extern void pmm_free(uint32_t);
+
+    uint32_t p1 = pmm_alloc();
+    uint32_t p2 = pmm_alloc();
+    uint32_t p3 = pmm_alloc();
+
+    if (p1 && p2 && p3) {
+        shell_write("alocou 3 paginas: 0x");
+        /* imprime p1 em hex */
+        char hex[9];
+        uint32_t v = p1;
+        for (int i = 7; i >= 0; i--) {
+            hex[i] = "0123456789ABCDEF"[v & 0xF];
+            v >>= 4;
+        }
+        hex[8] = '\0';
+        shell_write(hex);
+        shell_writeln(" OK");
+
+        pmm_free(p1);
+        pmm_free(p2);
+        pmm_free(p3);
+        shell_writeln("Liberou 3 paginas: OK");
+    } else {
+        shell_writeln("ERRO — pmm_alloc retornou 0");
     }
 }
 static void cmd_help(int argc, char **argv){

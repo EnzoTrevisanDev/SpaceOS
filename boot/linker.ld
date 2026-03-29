@@ -19,5 +19,6 @@ SECTIONS
     .bss ALIGN(4K) : {
         *(COMMON)
         *(.bss)         /* stack e variaveis sem valor inicial */
+        _end = .;       /* fim do kernel                      */
     }
 }

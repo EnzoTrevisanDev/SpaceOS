@@ -9,6 +9,7 @@
 #include "cpu/pic.h"
 #include "teclado.h"
 #include "shell/shell.h"
+#include "mem/pmm.h"
 
 
 //ponteiro para o buffer VGA
@@ -76,8 +77,8 @@ void write(const char *s) {
 
 // -- KERNEL MAIN ---
 // call the assembly code to initialize the kernel and then call the C function
-
-void kernel_main() {
+extern uint32_t multiboot_ptr;
+void kernel_main(void) {
     clean_screen();
 
     write("SpaceOS v0.1 - Bare Metal\n");
@@ -95,8 +96,14 @@ void kernel_main() {
 
     teclado_init(); /* registra o handler do teclado */
     write("Teclado ok\n");
+    
+    
     /* Habilita interrupcoes na CPU — sem isso nada funciona */
     __asm__ volatile ("sti");
+
+    pmm_init(multiboot_ptr);
+    write("PMM ok\n");
+    
 
     write("Teclado pronto! Digite algo:\n\n");
     /* Entra na shell — nunca retorna */

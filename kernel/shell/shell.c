@@ -78,6 +78,21 @@ void shell_set_cor(unsigned char c) {
     cor_atual = c | 0x00;  /* fundo sempre preto, so muda o texto */
 }
 
+
+void shell_write_num(uint32_t n){
+    if (n == 0){ shell_write_char('0'); return;}
+    char buf[12];
+    int i = 0;
+    while(n > 0){
+        buf[i++] = '0' + (n % 10);
+        n /= 10;
+    }
+    //inverte
+    for (int j = i - 1; j >= 0; j--){
+        shell_write_char(buf[j]);
+    }
+}
+
 //=====================
 //====  prompt   ======
 //=====================

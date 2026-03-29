@@ -3,6 +3,8 @@
 [EXTERN kernel_main]
 [GLOBAL teclado_handler_asm]
 [EXTERN teclado_handler]
+[GLOBAL multiboot_ptr]
+
 
 ; --- Multiboot ---
 MULTIBOOT_MAGIC    equ 0x1BADB002
@@ -21,12 +23,16 @@ section .bss
         resb 16384
     stack_top:
 
+section .data
+    multiboot_ptr dd 0 ;armazena o ponteiro multiboot
+
 ; --- Todo o codigo executavel numa section .text so ---
 section .text
 
 init:
     mov esp, stack_top
-    call kernel_main
+    mov [multiboot_ptr], ebx ; salva ebs numa variavel global
+    call kernel_main ; kernel_main(uiint32_t mboot_addr)
     cli
 .stuck:
     hlt

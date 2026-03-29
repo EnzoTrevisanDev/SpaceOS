@@ -162,10 +162,10 @@ void teclado_handler(void) {
     uint8_t scancode = in_byte(PORTA_TECLADO);
 
     /* Bit 7 = 1 significa tecla solta (key up) — ignora */
-    static uint8_t debug_buf[4] = {0,0,0,0};
-    static int debug_idx = 0;
-    debug_buf[debug_idx % 4] = scancode;
-    debug_idx++;
+    //static uint8_t debug_buf[4] = {0,0,0,0};
+    //static int debug_idx = 0;
+    //debug_buf[debug_idx % 4] = scancode;
+    //debug_idx++;
 
     if (scancode & 0x80) {
         prefixo_e0 = 0;
