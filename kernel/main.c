@@ -12,6 +12,7 @@
 #include "mem/pmm.h"
 #include "mem/paging.h"
 #include "mem/kheap.h"
+#include "mem/slab.h"
 
 //ponteiro para o buffer VGA
 static unsigned short *vga = (unsigned short *)VGA_BASE;
@@ -115,6 +116,10 @@ void kernel_main(void) {
     
     kheap_init();
     write("Heap ok\n");
+
+    slab_init();
+    write("Slab ok\n");
+
     /* Entra na shell — nunca retorna */
     shell_init();
 

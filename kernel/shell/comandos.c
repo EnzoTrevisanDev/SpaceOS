@@ -12,6 +12,7 @@ static void cmd_eco(int argc, char **argv);
 static void cmd_mem(int argc, char **argv);
 static void cmd_tecla(int argc, char **argv);
 static void cmd_heap(int argc, char **argv);
+static void cmd_slab(int argc, char **argv);
 static void cmd_paging(int argc, char **argv);
 
 
@@ -28,6 +29,7 @@ static Comando tabela[] = {
     { "mem", "mostra informacoes de memoria", cmd_mem },
     { "paging", "testa o sistema de paging", cmd_paging },
     { "heap", "testa kmalloc e kfree", cmd_heap },
+    { "slab", "testa o slab allocator", cmd_slab },
     {"reboot", "Reinicia o sistema", cmd_reboot},
 };
 
@@ -213,6 +215,51 @@ static void cmd_heap(int argc, char **argv) {
         kfree(d);
     } else {
         shell_writeln("ERRO — kfree nao liberou corretamente");
+    }
+}
+
+static void cmd_slab(int argc, char **argv) {
+    (void)argc; (void)argv;
+
+    extern void  slab_info(void);
+    extern void *slab_alloc(void *);
+    extern void  slab_free(void *, void *);
+    extern void *slab_criar(uint32_t);
+
+    slab_info();
+    shell_writeln("");
+
+    /* Teste — aloca e libera objetos de 32 bytes */
+    shell_writeln("Teste slab_alloc/free (32B):");
+
+    extern void *cache_32;
+    void *a = slab_alloc(cache_32);
+    void *b = slab_alloc(cache_32);
+    void *c = slab_alloc(cache_32);
+
+    if (a && b && c) {
+        /* Escreve nos objetos para verificar que a memoria e valida */
+        *(uint32_t *)a = 0xAAAA;
+        *(uint32_t *)b = 0xBBBB;
+        *(uint32_t *)c = 0xCCCC;
+
+        int ok = (*(uint32_t *)a == 0xAAAA &&
+                  *(uint32_t *)b == 0xBBBB &&
+                  *(uint32_t *)c == 0xCCCC);
+
+        shell_writeln(ok ? "  alloc + escrita OK" : "  ERRO na escrita");
+
+        slab_free(cache_32, a);
+        slab_free(cache_32, b);
+        slab_free(cache_32, c);
+        shell_writeln("  free OK");
+
+        /* Verifica que o objeto liberado pode ser realocado */
+        void *d = slab_alloc(cache_32);
+        shell_writeln(d ? "  realloc OK" : "  ERRO no realloc");
+        if (d) slab_free(cache_32, d);
+    } else {
+        shell_writeln("  ERRO — slab_alloc retornou null");
     }
 }
 
