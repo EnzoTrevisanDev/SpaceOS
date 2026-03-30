@@ -1,5 +1,6 @@
 #include "comandos.h"
 #include "shell.h"
+#include "../proc/processo.h"
 
 
 // declaracao antecipadas de cada comando
@@ -13,6 +14,7 @@ static void cmd_mem(int argc, char **argv);
 static void cmd_tecla(int argc, char **argv);
 static void cmd_heap(int argc, char **argv);
 static void cmd_slab(int argc, char **argv);
+static void cmd_proc(int argc, char **argv);
 static void cmd_paging(int argc, char **argv);
 
 
@@ -30,6 +32,7 @@ static Comando tabela[] = {
     { "paging", "testa o sistema de paging", cmd_paging },
     { "heap", "testa kmalloc e kfree", cmd_heap },
     { "slab", "testa o slab allocator", cmd_slab },
+    { "proc", "lista processos", cmd_proc },
     {"reboot", "Reinicia o sistema", cmd_reboot},
 };
 
@@ -260,6 +263,24 @@ static void cmd_slab(int argc, char **argv) {
         if (d) slab_free(cache_32, d);
     } else {
         shell_writeln("  ERRO — slab_alloc retornou null");
+    }
+}
+
+static void cmd_proc(int argc, char **argv) {
+    (void)argc; (void)argv;
+
+    shell_writeln("=== Processos ===");
+
+    processo_t *p = proc_fila();
+    while (p) {
+        shell_write("  PID ");
+        shell_write_num(p->pid);
+        shell_write(" | ");
+        shell_write(p->nome);
+        shell_write(" | estado: ");
+        shell_write_num(p->estado);
+        shell_writeln("");
+        p = p->proximo;
     }
 }
 
