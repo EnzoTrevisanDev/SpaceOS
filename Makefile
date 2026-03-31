@@ -21,11 +21,11 @@ LFLAGS = -m elf_i386 -T boot/linker.ld
 
 
 OBJ = boot/entry.o kernel/main.o kernel/cpu/gdt.o kernel/cpu/idt.o \
-      kernel/cpu/pic.o kernel/teclado.o \
+      kernel/cpu/pic.o kernel/cpu/timer.o kernel/teclado.o \
       kernel/shell/shell.o kernel/shell/comandos.o \
       kernel/mem/pmm.o kernel/mem/paging.o \
       kernel/mem/paging_fault.o kernel/mem/kheap.o kernel/mem/slab.o \
-      kernel/proc/processo.o
+      kernel/proc/processo.o kernel/proc/sched.o
 	  
 # Alvo padrao: compila tudo e gera a ISO
 all: SpaceOS.iso
@@ -72,6 +72,13 @@ kernel/mem/slab.o: kernel/mem/slab.c
 
 kernel/proc/processo.o: kernel/proc/processo.c
 	$(CC) $(CFLAGS) -c kernel/proc/processo.c -o kernel/proc/processo.o
+
+kernel/cpu/timer.o: kernel/cpu/timer.c
+	$(CC) $(CFLAGS) -c kernel/cpu/timer.c -o kernel/cpu/timer.o
+
+kernel/proc/sched.o: kernel/proc/sched.c
+	$(CC) $(CFLAGS) -c kernel/proc/sched.c -o kernel/proc/sched.o
+
 
 # -------------- Compila o main C --------------
 kernel/main.o: kernel/main.c

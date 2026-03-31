@@ -14,6 +14,8 @@
 #include "mem/kheap.h"
 #include "mem/slab.h"
 #include "proc/processo.h"
+#include "cpu/timer.h"
+#include "proc/sched.h"
 
 //ponteiro para o buffer VGA
 static unsigned short *vga = (unsigned short *)VGA_BASE;
@@ -109,7 +111,7 @@ void kernel_main(void) {
 
     // registra o page fault handler na IDT - interrupcao 14
     extern void page_fault_asm(void);
-    extern void idt_set(uint8_t, uint32_t, uint16_t, uint8_t);
+    //extern void idt_set(uint8_t, uint32_t, uint16_t, uint8_t);
     idt_set(14, (uint32_t)page_fault_asm, 0x08, 0x8E);
 
     paging_init();
@@ -123,6 +125,14 @@ void kernel_main(void) {
 
     proc_init();
     write("Proc ok\n");
+
+    //timer - IRQ0 remapeado para interrupcao 32
+    idt_set(32, (uint32_t)timer_handler_asm, 0x08, 0x8E);
+    timer_init();
+    write("timer ok!\n");
+
+    sched_init();
+    write("Sched ok\n");
 
     /* Entra na shell — nunca retorna */
     shell_init();

@@ -268,8 +268,13 @@ static void cmd_slab(int argc, char **argv) {
 
 static void cmd_proc(int argc, char **argv) {
     (void)argc; (void)argv;
+    extern uint32_t sched_ticks(void);
 
     shell_writeln("=== Processos ===");
+    shell_write("Ticks desde boot: ");
+    shell_write_num(sched_ticks());
+    shell_writeln("");
+    shell_writeln("");
 
     processo_t *p = proc_fila();
     while (p) {
@@ -283,6 +288,7 @@ static void cmd_proc(int argc, char **argv) {
         p = p->proximo;
     }
 }
+
 
 static void cmd_help(int argc, char **argv){
     (void)argc; (void)argv;

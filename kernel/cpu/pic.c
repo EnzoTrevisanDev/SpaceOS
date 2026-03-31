@@ -43,7 +43,7 @@ void pic_init(void) {
     out_byte(PIC2_DAD, 0x01); io_wait();
 
     /* Mascara todos os IRQs por enquanto — habilita so o que precisar */
-    out_byte(PIC1_DAD, 0xFD); /* 1111 1101 — so IRQ1 (teclado) habilitado */
+    out_byte(PIC1_DAD, 0xFC); /* IRQ0 (timer) + IRQ1 (teclado) */
     out_byte(PIC2_DAD, 0xFF); /* tudo desabilitado no PIC2 por agora */
 }
 

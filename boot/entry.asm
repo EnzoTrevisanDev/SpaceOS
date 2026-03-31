@@ -6,6 +6,8 @@
 [GLOBAL multiboot_ptr]
 [GLOBAL page_fault_asm]
 [EXTERN page_fault_handler]
+[GLOBAL timer_handler_asm]
+[EXTERN timer_handler]
 
 
 ; --- Multiboot ---
@@ -50,6 +52,11 @@ page_fault_asm:
     call page_fault_handler
     popad
     add esp, 4 ; remove o error code que o CPU empurrou
+    iret
+timer_handler_asm:
+    pushad
+    call timer_handler
+    popad
     iret
 
 ; --- Deve ficar por ultimo, fora do .text ---
