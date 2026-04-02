@@ -30,6 +30,7 @@ typedef struct processo {
     uint32_t pid;
     uint8_t estado;
     uint8_t prioridade; //0=baixa 1=media 2=alta
+    uint8_t creditos;
     contexto_t ctx; //estado da CPU salvo
     uint32_t *page_dir; //page directory proprio
     uint8_t *stack; //base da stack alocada

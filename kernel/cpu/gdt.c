@@ -1,6 +1,6 @@
 #include "gdt.h"
 
-static gdt_entry_t gdt[3];
+static gdt_entry_t gdt[5];
 static gdt_ptr_t gdt_ptr;
 
 static void gdt_set(int num, uint32_t base, uint32_t limite, uint8_t acesso, uint8_t gran) {
@@ -13,23 +13,24 @@ static void gdt_set(int num, uint32_t base, uint32_t limite, uint8_t acesso, uin
 }
 
 void gdt_init(void) {
-    gdt_ptr.limite = (sizeof(gdt_entry_t) * 3) - 1;
+    gdt_ptr.limite = (sizeof(gdt_entry_t) * 5) - 1;
     gdt_ptr.base   = (uint32_t)gdt;
 
-    gdt_set(0, 0, 0,          0,    0);    /* entrada nula — obrigatoria */
-    gdt_set(1, 0, 0xFFFFFFFF, 0x9A, 0xCF); /* segmento de codigo kernel */
-    gdt_set(2, 0, 0xFFFFFFFF, 0x92, 0xCF); /* segmento de dados kernel  */
+    gdt_set(0, 0, 0,          0,    0);     /* nula — obrigatoria */
+    gdt_set(1, 0, 0xFFFFFFFF, 0x9A, 0xCF); /* codigo kernel Ring 0 */
+    gdt_set(2, 0, 0xFFFFFFFF, 0x92, 0xCF); /* dados kernel  Ring 0 */
+    gdt_set(3, 0, 0xFFFFFFFF, 0xFA, 0xCF); /* codigo usuario Ring 3 */
+    gdt_set(4, 0, 0xFFFFFFFF, 0xF2, 0xCF); /* dados usuario  Ring 3 */
 
-    /* Carrega a GDT e atualiza os registradores de segmento */
     __asm__ volatile (
         "lgdt %0\n"
-        "mov $0x10, %%ax\n"   /* 0x10 = terceira entrada = segmento de dados */
+        "mov $0x10, %%ax\n"
         "mov %%ax, %%ds\n"
         "mov %%ax, %%es\n"
         "mov %%ax, %%fs\n"
         "mov %%ax, %%gs\n"
         "mov %%ax, %%ss\n"
-        "ljmp $0x08, $1f\n"   /* 0x08 = segunda entrada = segmento de codigo */
+        "ljmp $0x08, $1f\n"
         "1:\n"
         : : "m"(gdt_ptr) : "eax"
     );

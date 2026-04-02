@@ -8,6 +8,8 @@
 [EXTERN page_fault_handler]
 [GLOBAL timer_handler_asm]
 [EXTERN timer_handler_c]
+[GLOBAL syscall_handler_asm]
+[EXTERN syscall_handler]
 
 
 ; --- Multiboot ---
@@ -64,6 +66,11 @@ timer_handler_asm:
     popad                       ; restaura registradores do novo processo
     iret                        ; retorna para onde o novo processo estava
 
+syscall_handler_asm:
+    pushad
+    call syscall_handler
+    popad
+    iret
 
 ; --- Deve ficar por ultimo, fora do .text ---
 section .note.GNU-stack noalloc noexec nowrite progbits

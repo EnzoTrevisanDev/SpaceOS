@@ -15,6 +15,7 @@ static void cmd_tecla(int argc, char **argv);
 static void cmd_heap(int argc, char **argv);
 static void cmd_slab(int argc, char **argv);
 static void cmd_proc(int argc, char **argv);
+static void cmd_syscall(int argc, char **argv);
 static void cmd_paging(int argc, char **argv);
 
 
@@ -33,6 +34,7 @@ static Comando tabela[] = {
     { "heap", "testa kmalloc e kfree", cmd_heap },
     { "slab", "testa o slab allocator", cmd_slab },
     { "proc", "lista processos", cmd_proc },
+    { "syscall", "testa as syscalls", cmd_syscall },
     {"reboot", "Reinicia o sistema", cmd_reboot},
 };
 
@@ -289,7 +291,35 @@ static void cmd_proc(int argc, char **argv) {
     }
 }
 
+static void cmd_syscall(int argc, char **argv) {
+    (void)argc; (void)argv;
 
+    shell_writeln("Testando syscalls:");
+
+    /* Teste SYS_GETPID via int 0x80 */
+    uint32_t pid;
+    __asm__ volatile (
+        "mov $2, %%eax\n"    /* SYS_GETPID = 2 */
+        "int $0x80\n"
+        "mov %%eax, %0\n"
+        : "=r"(pid)
+    );
+    shell_write("  SYS_GETPID retornou PID: ");
+    shell_write_num(pid);
+    shell_writeln("");
+
+    /* Teste SYS_WRITE via int 0x80 */
+    const char *msg = "  SYS_WRITE funcionando!\n";
+    __asm__ volatile (
+        "mov $1, %%eax\n"         /* SYS_WRITE = 1 */
+        "mov %0, %%ebx\n"         /* ponteiro da string */
+        "mov $25, %%ecx\n"        /* tamanho */
+        "int $0x80\n"
+        : : "r"(msg) : "eax", "ebx", "ecx"
+    );
+
+    shell_writeln("Syscalls OK!");
+}
 static void cmd_help(int argc, char **argv){
     (void)argc; (void)argv;
     shell_writeln("Comandos disponiveis");
