@@ -48,48 +48,43 @@ void proc_init(void){
     fila_pronto = kproc;
 }
 
-processo_t *proc_criar(const char *nome, void (*entrada)(void), uint8_t prioridade){
-    //aloca o PCB
+processo_t *proc_criar(const char *nome, void (*entrada)(void), uint8_t prioridade) {
     processo_t *proc = kmalloc(sizeof(processo_t));
     if (!proc) return 0;
 
-    //aloca a stack do processo
     uint8_t *stack = kmalloc(STACK_SIZE);
-    if(!stack) { kfree(proc); return 0;}
+    if (!stack) { kfree(proc); return 0; }
 
-    proc->pid = prox_pid++;
-    proc->estado = PROC_READY;
+    proc->pid        = prox_pid++;
+    proc->estado     = PROC_READY;
     proc->prioridade = prioridade;
-    proc->stack = stack;
+    proc->stack      = stack;
     proc->stack_size = STACK_SIZE;
-    proc->page_dir = 0;
-    proc->proximo = 0;
+    proc->page_dir   = 0;
+    proc->proximo    = 0;
     str_copy(proc->nome, nome, 32);
 
-    //monta o ctx inicial do processo
     uint32_t *topo = (uint32_t *)(stack + STACK_SIZE);
 
-    //empurar proc_encerrar como endereco de retorno
-    //se a func de entrada retornar, cai aqui automaticamente
-    topo--;
-    *topo = (uint32_t)proc_encerrar;
+    *--topo = 0x00000202;
+    *--topo = 0x08;
+    *--topo = (uint32_t)entrada;
+    *--topo = 0;  /* EAX */
+    *--topo = 0;  /* ECX */
+    *--topo = 0;  /* EDX */
+    *--topo = 0;  /* EBX */
+    *--topo = 0;  /* ESP dummy */
+    *--topo = 0;  /* EBP */
+    *--topo = 0;  /* ESI */
+    *--topo = 0;  /* EDI */
 
-
-    //zera contexto
-    for(int i = 0; i < (int)sizeof(contexto_t); i++)
-        ((uint8_t *)&proc->ctx)[i] = 0;
-    
-    //EIP = processo vai comecar a executar
-    proc->ctx.eip = (uint32_t)entrada;
-    
-    //ESP = topo da stack menos o endereco de retorno que empurramos
     proc->ctx.esp = (uint32_t)topo;
+    proc->ctx.eip = (uint32_t)entrada;
 
-    //add na fila de prontos
     fila_adicionar(proc);
-
     return proc;
 }
+
 
 void proc_encerrar(void){
     if(proc_atual_ptr){
@@ -97,4 +92,8 @@ void proc_encerrar(void){
         //loop infinito - scheduler vai remover no proximo tick
         while (1) {}
     }
+}
+
+void proc_set_atual(processo_t *p) {
+    proc_atual_ptr = p;
 }

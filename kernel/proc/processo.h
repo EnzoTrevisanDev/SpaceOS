@@ -49,5 +49,5 @@ processo_t *proc_criar(const char *nome, void (*entrada)(void), uint8_t priorida
 void proc_encerrar(void);
 processo_t *proc_atual(void);
 processo_t *proc_fila(void);
-
+void proc_set_atual(processo_t *p);
 #endif

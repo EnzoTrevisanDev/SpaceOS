@@ -3,10 +3,8 @@
 
 #include <stdint.h>
 
-void sched_init(void);
-
-void sched_tick(void);
-
+void     sched_init(void);
+uint32_t sched_tick(uint32_t esp_atual);
 uint32_t sched_ticks(void);
 
 #endif

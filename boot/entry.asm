@@ -7,7 +7,7 @@
 [GLOBAL page_fault_asm]
 [EXTERN page_fault_handler]
 [GLOBAL timer_handler_asm]
-[EXTERN timer_handler]
+[EXTERN timer_handler_c]
 
 
 ; --- Multiboot ---
@@ -54,10 +54,16 @@ page_fault_asm:
     add esp, 4 ; remove o error code que o CPU empurrou
     iret
 timer_handler_asm:
-    pushad
-    call timer_handler
-    popad
-    iret
+    pushad                      ; salva todos os registradores na stack atual
+    mov eax, esp                ; eax = ESP atual (stack do processo em pausa)
+    push eax                    ; passa como argumento para o handler C
+    call timer_handler_c        ; chama o scheduler — retorna o novo ESP
+    add esp, 4                  ; limpa o argumento da stack
+    mov esp, eax                ; troca para a stack do novo processo
+; a partir daqui estamos no contexto do novo processo
+    popad                       ; restaura registradores do novo processo
+    iret                        ; retorna para onde o novo processo estava
+
 
 ; --- Deve ficar por ultimo, fora do .text ---
 section .note.GNU-stack noalloc noexec nowrite progbits

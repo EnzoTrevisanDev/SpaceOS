@@ -79,6 +79,32 @@ void write(const char *s) {
         s++;
     }
 }
+static void proc_a(void) {
+    volatile unsigned short *vga = (volatile unsigned short *)0xB8000;
+    uint32_t contador = 0;
+    while (1) {
+        contador++;
+        if (contador % 50000 == 0) {
+            const char *msg = "AAA PROC A AAA";
+            for (int i = 0; msg[i]; i++)
+                vga[i] = (unsigned short)(msg[i] | (0x0A << 8));
+        }
+    }
+}
+
+static void proc_b(void) {
+    volatile unsigned short *vga = (volatile unsigned short *)0xB8000;
+    uint32_t contador = 0;
+    while (1) {
+        contador++;
+        if (contador % 50000 == 0) {
+            const char *msg = "BBB PROC B BBB";
+            for (int i = 0; msg[i]; i++)
+                vga[i] = (unsigned short)(msg[i] | (0x0C << 8));
+        }
+    }
+}
+
 
 // -- KERNEL MAIN ---
 // call the assembly code to initialize the kernel and then call the C function
@@ -133,7 +159,10 @@ void kernel_main(void) {
 
     sched_init();
     write("Sched ok\n");
-
+    
+    
+    //proc_criar("proc_a", proc_a, 1);
+    //proc_criar("proc_b", proc_b, 1);
     /* Entra na shell — nunca retorna */
     shell_init();
 

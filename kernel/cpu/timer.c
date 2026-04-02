@@ -13,12 +13,13 @@ static void out_byte(uint16_t porta, uint8_t valor){
 
 uint32_t timer_ticks(void) { return ticks; }
 
-void timer_handler(void){
+/* Chamado pelo Assembly com o ESP atual do processo pausado
+   Retorna o ESP do proximo processo a rodar */
+uint32_t timer_handler_c(uint32_t esp_atual) {
     ticks++;
-    sched_tick(); //avisa o scheduler que um tick passou
-    pic_ack(0); // obrigatorio - sem isso o PIC para de mandar IRQ0
+    pic_ack(0);
+    return sched_tick(esp_atual);   /* scheduler decide quem roda */
 }
-
 
 void timer_init(void){
     // calcula o divisor para atingir TIMER_HZ

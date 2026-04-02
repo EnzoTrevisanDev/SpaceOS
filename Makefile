@@ -79,7 +79,6 @@ kernel/cpu/timer.o: kernel/cpu/timer.c
 kernel/proc/sched.o: kernel/proc/sched.c
 	$(CC) $(CFLAGS) -c kernel/proc/sched.c -o kernel/proc/sched.o
 
-
 # -------------- Compila o main C --------------
 kernel/main.o: kernel/main.c
 	$(CC) $(CFLAGS) -c kernel/main.c -o kernel/main.o
