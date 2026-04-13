@@ -21,7 +21,8 @@ OBJ = boot/entry.o \
       kernel/mem/kheap.o \
       kernel/mem/slab.o \
       kernel/proc/processo.o \
-      kernel/proc/sched.o
+      kernel/proc/sched.o \
+	  kernel/proc/identidade.o \
 
 all: SpaceOS.iso
 
@@ -75,6 +76,10 @@ kernel/proc/processo.o: kernel/proc/processo.c
 
 kernel/proc/sched.o: kernel/proc/sched.c
 	$(CC) $(CFLAGS) -c kernel/proc/sched.c -o kernel/proc/sched.o
+
+kernel/proc/identidade.o: kernel/proc/identidade.c
+	$(CC) $(CFLAGS) -c kernel/proc/identidade.c -o kernel/proc/identidade.o
+
 
 SpaceOS.bin: $(OBJ)
 	$(LD) $(LFLAGS) -o SpaceOS.bin $(OBJ)

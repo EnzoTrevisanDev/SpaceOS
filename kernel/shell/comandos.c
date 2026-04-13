@@ -1,7 +1,7 @@
 #include "comandos.h"
 #include "shell.h"
 #include "../proc/processo.h"
-
+#include "../proc/identidade.h"
 
 // declaracao antecipadas de cada comando
 static void cmd_help(int argc, char **argv);
@@ -17,7 +17,7 @@ static void cmd_slab(int argc, char **argv);
 static void cmd_proc(int argc, char **argv);
 static void cmd_syscall(int argc, char **argv);
 static void cmd_paging(int argc, char **argv);
-
+static void cmd_fork(int argc, char **argv);
 
 
 
@@ -36,6 +36,7 @@ static Comando tabela[] = {
     { "proc", "lista processos", cmd_proc },
     { "syscall", "testa as syscalls", cmd_syscall },
     {"reboot", "Reinicia o sistema", cmd_reboot},
+    {"fork", "testa fork e identidade", cmd_fork},
 };
 
 static int total = sizeof(tabela) / sizeof(Comando);
@@ -319,6 +320,48 @@ static void cmd_syscall(int argc, char **argv) {
     );
 
     shell_writeln("Syscalls OK!");
+}
+
+static void cmd_fork(int argc, char **argv) {
+    (void)argc; (void)argv;
+
+    shell_writeln("=== Teste fork + identidade ===");
+    shell_writeln("");
+
+    processo_t *atual = proc_atual();
+    if (atual) {
+        shell_write("PID atual: ");
+        shell_write_num(atual->pid);
+        shell_writeln("");
+
+        shell_write("Hash identidade: 0x");
+        uint32_t h = atual->id.hash;
+        char hex[9];
+        for (int i = 7; i >= 0; i--) {
+            hex[i] = "0123456789ABCDEF"[h & 0xF];
+            h >>= 4;
+        }
+        hex[8] = '\0';
+        shell_write(hex);
+        shell_writeln("");
+
+        shell_write("Tick nascimento: ");
+        shell_write_num(atual->id.tick_nascimento);
+        shell_writeln("");
+        shell_writeln("");
+    }
+
+    shell_writeln("Chamando fork()...");
+    int32_t pid_filho = proc_fork();
+
+    if (pid_filho > 0) {
+        shell_write("PAI: filho criado com PID ");
+        shell_write_num(pid_filho);
+        shell_writeln("");
+        shell_writeln("fork + identidade OK!");
+    } else {
+        shell_writeln("ERRO: fork falhou");
+    }
 }
 static void cmd_help(int argc, char **argv){
     (void)argc; (void)argv;

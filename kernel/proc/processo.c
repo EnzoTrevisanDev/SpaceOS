@@ -1,6 +1,8 @@
 #include "processo.h"
 #include "../mem/kheap.h"
 #include "../shell/shell.h"
+#include "identidade.h"
+#include "../proc/sched.h"
 
 //estado global do scheduler
 static processo_t *proc_atual_ptr = 0; //processo rodando agora
@@ -44,6 +46,9 @@ void proc_init(void){
     kproc->proximo = 0;
     str_copy(kproc->nome, "kernel", 32);
 
+
+    kproc->id = identidade_gerar(0, sched_ticks(), (uint32_t)kproc);
+
     proc_atual_ptr = kproc;
     fila_pronto = kproc;
 }
@@ -63,6 +68,9 @@ processo_t *proc_criar(const char *nome, void (*entrada)(void), uint8_t priorida
     proc->page_dir   = 0;
     proc->proximo    = 0;
     str_copy(proc->nome, nome, 32);
+
+
+    proc->id = identidade_gerar(proc->pid, sched_ticks(), (uint32_t)stack);
 
     uint32_t *topo = (uint32_t *)(stack + STACK_SIZE);
 
@@ -96,4 +104,69 @@ void proc_encerrar(void){
 
 void proc_set_atual(processo_t *p) {
     proc_atual_ptr = p;
+}
+
+
+int32_t proc_fork(void) {
+    processo_t *pai = proc_atual_ptr;
+    if (!pai) return -1;
+
+    /* Kernel (PID 0) nao pode fazer fork — nao tem stack propria */
+    if (pai->stack == 0) {
+        shell_writeln("fork: processo kernel nao pode fazer fork");
+        return -1;
+    }
+
+    processo_t *filho = kmalloc(sizeof(processo_t));
+    if (!filho) return -1;
+
+    uint8_t *stack_filho = kmalloc(STACK_SIZE);
+    if (!stack_filho) { kfree(filho); return -1; }
+
+    *filho = *pai;
+
+    filho->pid    = prox_pid++;
+    filho->estado = PROC_READY;
+    filho->stack  = stack_filho;
+    filho->proximo = 0;
+
+    for (uint32_t i = 0; i < STACK_SIZE; i++)
+        stack_filho[i] = pai->stack[i];
+
+    uint32_t offset = pai->ctx.esp - (uint32_t)pai->stack;
+    filho->ctx.esp  = (uint32_t)stack_filho + offset;
+
+    uint32_t *stack_ptr = (uint32_t *)filho->ctx.esp;
+    stack_ptr[7] = 0;
+
+    str_copy(filho->nome, pai->nome, 28);
+    filho->id = identidade_gerar(filho->pid, sched_ticks(), (uint32_t)stack_filho);
+    filho->nome[27] = '\0';
+
+    fila_adicionar(filho);
+    return (int32_t)filho->pid;
+}
+int32_t proc_exec(void (*entrada)(void)) {
+    processo_t *proc = proc_atual_ptr;
+    if (!proc) return -1;
+
+    /* Reconfigura a stack do processo para comecar na nova funcao */
+    uint32_t *topo = (uint32_t *)(proc->stack + STACK_SIZE);
+
+    *--topo = 0x00000202;          /* EFLAGS */
+    *--topo = 0x08;                /* CS */
+    *--topo = (uint32_t)entrada;   /* EIP — nova funcao */
+    *--topo = 0;  /* EAX */
+    *--topo = 0;  /* ECX */
+    *--topo = 0;  /* EDX */
+    *--topo = 0;  /* EBX */
+    *--topo = 0;  /* ESP dummy */
+    *--topo = 0;  /* EBP */
+    *--topo = 0;  /* ESI */
+    *--topo = 0;  /* EDI */
+
+    proc->ctx.esp = (uint32_t)topo;
+    proc->ctx.eip = (uint32_t)entrada;
+
+    return 0;
 }

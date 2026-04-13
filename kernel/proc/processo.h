@@ -2,7 +2,7 @@
 #define PROCESSO_H
 
 #include <stdint.h>
-
+#include "identidade.h" //identidade unica de cada processo, usada para verificacao de validade
 //estados dos processos
 #define PROC_RUNNING 0
 #define PROC_READY 1
@@ -31,6 +31,7 @@ typedef struct processo {
     uint8_t estado;
     uint8_t prioridade; //0=baixa 1=media 2=alta
     uint8_t creditos;
+    identidade_t id; //identidade unica do processo
     contexto_t ctx; //estado da CPU salvo
     uint32_t *page_dir; //page directory proprio
     uint8_t *stack; //base da stack alocada
@@ -51,4 +52,11 @@ void proc_encerrar(void);
 processo_t *proc_atual(void);
 processo_t *proc_fila(void);
 void proc_set_atual(processo_t *p);
+
+/* retorna PID do filho para o pai, 0 para o filho, -1 se falhar */
+int32_t proc_fork(void);
+
+/* substitui o processo atual por uma funcao nova */
+int32_t proc_exec(void (*entrada)(void));
+
 #endif
