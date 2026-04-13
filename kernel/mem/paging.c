@@ -62,4 +62,10 @@ void paging_mapear(uint32_t virt, uint32_t fis, uint32_t flags){
 }
 
 
+void paging_mapear_usuario(uint32_t virt, uint32_t fis){
+    paging_mapear(virt, fis, PAGE_PRESENTE | PAGE_ESCRITA | PAGE_USUARIO);
+}
 
+void paging_mapear_kernel(uint32_t virt, uint32_t fis){
+    paging_mapear(virt, fis, PAGE_PRESENTE | PAGE_ESCRITA);
+}

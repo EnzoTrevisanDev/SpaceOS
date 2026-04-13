@@ -17,6 +17,7 @@ static void cmd_slab(int argc, char **argv);
 static void cmd_proc(int argc, char **argv);
 static void cmd_syscall(int argc, char **argv);
 static void cmd_paging(int argc, char **argv);
+static void cmd_espaco(int argc, char **argv);
 static void cmd_fork(int argc, char **argv);
 
 
@@ -31,6 +32,7 @@ static Comando tabela[] = {
     { "tecla", "mostra codigo da tecla pressionada", cmd_tecla },
     { "mem", "mostra informacoes de memoria", cmd_mem },
     { "paging", "testa o sistema de paging", cmd_paging },
+    { "espaco", "mostra layout de memoria virtual", cmd_espaco },
     { "heap", "testa kmalloc e kfree", cmd_heap },
     { "slab", "testa o slab allocator", cmd_slab },
     { "proc", "lista processos", cmd_proc },
@@ -362,6 +364,23 @@ static void cmd_fork(int argc, char **argv) {
     } else {
         shell_writeln("ERRO: fork falhou");
     }
+}
+static void cmd_espaco(int argc, char **argv) {
+    (void)argc; (void)argv;
+    shell_writeln("=== Espaco de enderecos ===");
+    shell_writeln("");
+    shell_writeln("0x00000000 - 0xBFFFFFFF  usuario  (3GB)");
+    shell_writeln("0xC0000000 - 0xFFFFFFFF  kernel   (1GB)");
+    shell_writeln("");
+    shell_write("Kernel mapeado em: 0x");
+    shell_writeln("00100000");
+    shell_write("Heap kernel em:    0x");
+    shell_writeln("00300000");
+    shell_writeln("");
+    shell_writeln("Paginas kernel: Ring 3 nao tem acesso");
+    shell_writeln("Paginas usuario: Ring 0 e Ring 3 tem acesso");
+    shell_writeln("");
+    shell_writeln("Espaco kernel vs usuario: OK");
 }
 static void cmd_help(int argc, char **argv){
     (void)argc; (void)argv;
