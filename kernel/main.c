@@ -17,6 +17,8 @@
 #include "cpu/timer.h"
 #include "proc/sched.h"
 #include "cpu/syscall.h"
+#include "disk/ata.h"
+#include "fs/vfs.h"
 
 //ponteiro para o buffer VGA
 static unsigned short *vga = (unsigned short *)VGA_BASE;
@@ -134,7 +136,18 @@ void kernel_main(void) {
 
     sched_init();
     write("Sched ok\n");
-    
+    int disco = ata_init();
+    if (disco == 0)
+        write("Disco ok\n");
+    else
+        write("Sem disco\n");
+
+    vfs_init();
+    if (vfs_mounted())
+        write("VFS: FAT32 montado\n");
+    else
+        write("VFS: sem filesystem\n");
+
     syscall_init();
     write("Syscall ok\n");
     

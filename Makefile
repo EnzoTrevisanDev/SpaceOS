@@ -1,28 +1,32 @@
-CC     = gcc
+CC	 = gcc
 NASM   = nasm
-LD     = ld
+LD	 = ld
 
 CFLAGS = -m32 -ffreestanding -fno-builtin -fno-pic -nostdlib -O2 -Wall
 LFLAGS = -m elf_i386 -T boot/linker.ld
 
 OBJ = boot/entry.o \
-      kernel/main.o \
-      kernel/cpu/gdt.o \
-      kernel/cpu/idt.o \
-      kernel/cpu/pic.o \
-      kernel/cpu/timer.o \
-      kernel/cpu/syscall.o \
-      kernel/teclado.o \
-      kernel/shell/shell.o \
-      kernel/shell/comandos.o \
-      kernel/mem/pmm.o \
-      kernel/mem/paging.o \
-      kernel/mem/paging_fault.o \
-      kernel/mem/kheap.o \
-      kernel/mem/slab.o \
-      kernel/proc/processo.o \
-      kernel/proc/sched.o \
+	  kernel/main.o \
+	  kernel/cpu/gdt.o \
+	  kernel/cpu/idt.o \
+	  kernel/cpu/pic.o \
+	  kernel/cpu/timer.o \
+	  kernel/cpu/syscall.o \
+	  kernel/teclado.o \
+	  kernel/shell/shell.o \
+	  kernel/shell/comandos.o \
+	  kernel/mem/pmm.o \
+	  kernel/mem/paging.o \
+	  kernel/mem/paging_fault.o \
+	  kernel/mem/kheap.o \
+	  kernel/mem/slab.o \
+	  kernel/proc/processo.o \
+	  kernel/proc/sched.o \
 	  kernel/proc/identidade.o \
+	  kernel/disk/ata.o \
+	  kernel/disk/kstring.o \
+	  kernel/fs/fat32.o \
+	  kernel/fs/vfs.o \
 
 all: SpaceOS.iso
 
@@ -80,6 +84,17 @@ kernel/proc/sched.o: kernel/proc/sched.c
 kernel/proc/identidade.o: kernel/proc/identidade.c
 	$(CC) $(CFLAGS) -c kernel/proc/identidade.c -o kernel/proc/identidade.o
 
+kernel/disk/ata.o: kernel/disk/ata.c
+	$(CC) $(CFLAGS) -c kernel/disk/ata.c -o kernel/disk/ata.o
+
+kernel/disk/kstring.o: kernel/disk/kstring.c
+	$(CC) $(CFLAGS) -c kernel/disk/kstring.c -o kernel/disk/kstring.o
+
+kernel/fs/fat32.o: kernel/fs/fat32.c
+	$(CC) $(CFLAGS) -c kernel/fs/fat32.c -o kernel/fs/fat32.o
+
+kernel/fs/vfs.o: kernel/fs/vfs.c
+	$(CC) $(CFLAGS) -c kernel/fs/vfs.c -o kernel/fs/vfs.o
 
 SpaceOS.bin: $(OBJ)
 	$(LD) $(LFLAGS) -o SpaceOS.bin $(OBJ)
@@ -89,15 +104,18 @@ SpaceOS.iso: SpaceOS.bin
 	grub-mkrescue -o SpaceOS.iso iso/ 2>/dev/null
 
 rodar:
-	qemu-system-x86_64 -cdrom SpaceOS.iso -m 64M -k pt-br
+	qemu-system-x86_64 -cdrom SpaceOS.iso -m 64M -k pt-br -boot d \
+		-drive file=disco.img,format=raw,if=ide
 
 limpar:
 	rm -f boot/*.o \
-	      kernel/*.o \
-	      kernel/cpu/*.o \
-	      kernel/mem/*.o \
-	      kernel/proc/*.o \
-	      kernel/shell/*.o \
-	      SpaceOS.bin SpaceOS.iso
+	kernel/*.o \
+	kernel/cpu/*.o \
+	kernel/mem/*.o \
+	kernel/proc/*.o \
+	kernel/shell/*.o \
+	kernel/disk/*.o \
+	kernel/fs/*.o \
+	SpaceOS.bin SpaceOS.iso
 
 .PHONY: all rodar limpar

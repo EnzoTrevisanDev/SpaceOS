@@ -2,6 +2,8 @@
 #include "shell.h"
 #include "../proc/processo.h"
 #include "../proc/identidade.h"
+#include "../fs/vfs.h"
+#include "../mem/kheap.h"
 
 // declaracao antecipadas de cada comando
 static void cmd_help(int argc, char **argv);
@@ -18,7 +20,17 @@ static void cmd_proc(int argc, char **argv);
 static void cmd_syscall(int argc, char **argv);
 static void cmd_paging(int argc, char **argv);
 static void cmd_espaco(int argc, char **argv);
+static void cmd_disco(int argc, char **argv);
 static void cmd_fork(int argc, char **argv);
+/* Comandos de filesystem (v0.5 Saturno) */
+static void cmd_ls(int argc, char **argv);
+static void cmd_cd(int argc, char **argv);
+static void cmd_pwd(int argc, char **argv);
+static void cmd_cat(int argc, char **argv);
+static void cmd_mkdir(int argc, char **argv);
+static void cmd_rm(int argc, char **argv);
+static void cmd_cp(int argc, char **argv);
+static void cmd_mv(int argc, char **argv);
 
 
 
@@ -39,6 +51,16 @@ static Comando tabela[] = {
     { "syscall", "testa as syscalls", cmd_syscall },
     {"reboot", "Reinicia o sistema", cmd_reboot},
     {"fork", "testa fork e identidade", cmd_fork},
+    { "disco", "testa o driver ATA", cmd_disco },
+    /* Filesystem v0.5 */
+    { "ls",    "lista arquivos: ls [caminho]",         cmd_ls    },
+    { "cd",    "muda diretorio: cd <caminho>",         cmd_cd    },
+    { "pwd",   "mostra diretorio atual",               cmd_pwd   },
+    { "cat",   "mostra arquivo: cat <arquivo>",        cmd_cat   },
+    { "mkdir", "cria diretorio: mkdir <nome>",         cmd_mkdir },
+    { "rm",    "apaga arquivo: rm <arquivo>",          cmd_rm    },
+    { "cp",    "copia arquivo: cp <orig> <dest>",      cmd_cp    },
+    { "mv",    "move/renomeia: mv <orig> <dest>",      cmd_mv    },
 };
 
 static int total = sizeof(tabela) / sizeof(Comando);
@@ -365,6 +387,51 @@ static void cmd_fork(int argc, char **argv) {
         shell_writeln("ERRO: fork falhou");
     }
 }
+static void cmd_disco(int argc, char **argv) {
+    (void)argc; (void)argv;
+
+    extern int ata_ler(uint32_t, uint8_t, uint8_t *);
+    extern int ata_gravar(uint32_t, uint8_t, uint8_t *);
+
+    shell_writeln("=== Teste driver ATA ===");
+    shell_writeln("");
+
+    /* Aloca buffer de 1 setor */
+    extern void *kmalloc(uint32_t);
+    extern void  kfree(void *);
+
+    uint8_t *buf = kmalloc(512);
+    if (!buf) { shell_writeln("ERRO: sem memoria"); return; }
+
+    /* Tenta ler o setor 0 — MBR do disco */
+    int r = ata_ler(0, 1, buf);
+    if (r == 0) {
+        shell_writeln("Leitura setor 0: OK");
+
+        /* Verifica assinatura MBR — ultimos 2 bytes devem ser 0x55 0xAA */
+        if (buf[510] == 0x55 && buf[511] == 0xAA)
+            shell_writeln("Assinatura MBR: 0x55AA encontrada!");
+        else
+            shell_writeln("Assinatura MBR: nao encontrada");
+
+        /* Mostra primeiros 16 bytes em hex */
+        shell_write("Primeiros bytes: ");
+        for (int i = 0; i < 16; i++) {
+            char hex[3];
+            hex[0] = "0123456789ABCDEF"[(buf[i] >> 4) & 0xF];
+            hex[1] = "0123456789ABCDEF"[buf[i] & 0xF];
+            hex[2] = '\0';
+            shell_write(hex);
+            shell_write_char(' ');
+        }
+        shell_writeln("");
+    } else {
+        shell_writeln("Leitura setor 0: ERRO ou sem disco");
+        shell_writeln("(normal no QEMU sem disco configurado)");
+    }
+
+    kfree(buf);
+}
 static void cmd_espaco(int argc, char **argv) {
     (void)argc; (void)argv;
     shell_writeln("=== Espaco de enderecos ===");
@@ -464,4 +531,202 @@ static void cmd_reboot(int argc, char **argv){
         : : : "eax"
     );
     while(1){} /* seguranca caso o reboot demore */
+}
+
+/* -----------------------------------------------------------------------
+ * Comandos de Filesystem — v0.5 Saturno
+ * ----------------------------------------------------------------------- */
+
+static void cmd_pwd(int argc, char **argv) {
+    (void)argc; (void)argv;
+    if (!vfs_mounted()) { shell_writeln("pwd: sem filesystem montado"); return; }
+    shell_writeln(vfs_getcwd());
+}
+
+static void cmd_ls(int argc, char **argv) {
+    if (!vfs_mounted()) { shell_writeln("ls: sem filesystem montado"); return; }
+
+    const char *path = (argc >= 2) ? argv[1] : "";
+    vfs_entry_t entries[64];
+    int n = vfs_readdir(path, entries, 64);
+
+    if (n < 0) {
+        shell_write("ls: caminho nao encontrado");
+        if (argc >= 2) { shell_write(": "); shell_write(argv[1]); }
+        shell_writeln("");
+        return;
+    }
+
+    if (n == 0) { shell_writeln("(diretorio vazio)"); return; }
+
+    for (int i = 0; i < n; i++) {
+        if (entries[i].is_dir) {
+            shell_write(entries[i].name);
+            shell_writeln("/");
+        } else {
+            shell_write(entries[i].name);
+            /* Padding ate coluna 16 */
+            int len = 0;
+            const char *p = entries[i].name;
+            while (*p++) len++;
+            for (int j = len; j < 16; j++) shell_write_char(' ');
+            shell_write_num(entries[i].size);
+            shell_write(" B");
+            shell_writeln("");
+        }
+    }
+}
+
+static void cmd_cd(int argc, char **argv) {
+    if (!vfs_mounted()) { shell_writeln("cd: sem filesystem montado"); return; }
+
+    if (argc < 2) {
+        /* cd sem argumento vai para a raiz */
+        if (vfs_chdir("/") != 0)
+            shell_writeln("cd: erro ao voltar para /");
+        return;
+    }
+
+    if (vfs_chdir(argv[1]) != 0) {
+        shell_write("cd: nao encontrado: ");
+        shell_writeln(argv[1]);
+    }
+}
+
+static void cmd_cat(int argc, char **argv) {
+    if (!vfs_mounted()) { shell_writeln("cat: sem filesystem montado"); return; }
+
+    if (argc < 2) { shell_writeln("uso: cat <arquivo>"); return; }
+
+    /* Abre para descobrir o tamanho */
+    vfs_entry_t e;
+    if (vfs_open(argv[1], &e) != 0) {
+        shell_write("cat: arquivo nao encontrado: ");
+        shell_writeln(argv[1]);
+        return;
+    }
+    if (e.is_dir) {
+        shell_write("cat: ");
+        shell_write(argv[1]);
+        shell_writeln(" e um diretorio");
+        return;
+    }
+    if (e.size == 0) { shell_writeln("(arquivo vazio)"); return; }
+
+    /* Aloca buffer + 1 byte para terminador */
+    uint8_t *buf = kmalloc(e.size + 1);
+    if (!buf) { shell_writeln("cat: sem memoria"); return; }
+
+    int lidos = vfs_read(argv[1], buf, e.size);
+    if (lidos < 0) {
+        shell_writeln("cat: erro de leitura");
+        kfree(buf);
+        return;
+    }
+
+    buf[lidos] = '\0';
+
+    /* Imprime byte a byte para lidar com \n e \r corretamente */
+    for (int i = 0; i < lidos; i++) {
+        if (buf[i] == '\n') shell_writeln("");
+        else if (buf[i] != '\r') shell_write_char((char)buf[i]);
+    }
+    shell_writeln("");
+
+    kfree(buf);
+}
+
+static void cmd_mkdir(int argc, char **argv) {
+    if (!vfs_mounted()) { shell_writeln("mkdir: sem filesystem montado"); return; }
+
+    if (argc < 2) { shell_writeln("uso: mkdir <nome>"); return; }
+
+    if (vfs_mkdir(argv[1]) != 0) {
+        shell_write("mkdir: erro ao criar: ");
+        shell_writeln(argv[1]);
+    } else {
+        shell_write("Diretorio criado: ");
+        shell_writeln(argv[1]);
+    }
+}
+
+static void cmd_rm(int argc, char **argv) {
+    if (!vfs_mounted()) { shell_writeln("rm: sem filesystem montado"); return; }
+
+    if (argc < 2) { shell_writeln("uso: rm <arquivo>"); return; }
+
+    vfs_entry_t e;
+    if (vfs_open(argv[1], &e) != 0) {
+        shell_write("rm: nao encontrado: ");
+        shell_writeln(argv[1]);
+        return;
+    }
+    if (e.is_dir) {
+        shell_write("rm: ");
+        shell_write(argv[1]);
+        shell_writeln(" e um diretorio (use rmdir)");
+        return;
+    }
+
+    if (vfs_unlink(argv[1]) != 0) {
+        shell_write("rm: erro ao apagar: ");
+        shell_writeln(argv[1]);
+    } else {
+        shell_write("Apagado: ");
+        shell_writeln(argv[1]);
+    }
+}
+
+static void cmd_cp(int argc, char **argv) {
+    if (!vfs_mounted()) { shell_writeln("cp: sem filesystem montado"); return; }
+
+    if (argc < 3) { shell_writeln("uso: cp <origem> <destino>"); return; }
+
+    vfs_entry_t src;
+    if (vfs_open(argv[1], &src) != 0) {
+        shell_write("cp: origem nao encontrada: ");
+        shell_writeln(argv[1]);
+        return;
+    }
+    if (src.is_dir) {
+        shell_writeln("cp: nao copia diretorios");
+        return;
+    }
+
+    uint8_t *buf = kmalloc(src.size + 1);
+    if (!buf) { shell_writeln("cp: sem memoria"); return; }
+
+    if (vfs_read(argv[1], buf, src.size) < 0) {
+        shell_writeln("cp: erro de leitura");
+        kfree(buf);
+        return;
+    }
+
+    if (vfs_write(argv[2], buf, src.size) < 0) {
+        shell_write("cp: erro ao escrever: ");
+        shell_writeln(argv[2]);
+    } else {
+        shell_write(argv[1]);
+        shell_write(" -> ");
+        shell_writeln(argv[2]);
+    }
+
+    kfree(buf);
+}
+
+static void cmd_mv(int argc, char **argv) {
+    if (!vfs_mounted()) { shell_writeln("mv: sem filesystem montado"); return; }
+
+    if (argc < 3) { shell_writeln("uso: mv <origem> <destino>"); return; }
+
+    if (vfs_rename(argv[1], argv[2]) != 0) {
+        shell_write("mv: erro ao mover: ");
+        shell_write(argv[1]);
+        shell_write(" -> ");
+        shell_writeln(argv[2]);
+    } else {
+        shell_write(argv[1]);
+        shell_write(" -> ");
+        shell_writeln(argv[2]);
+    }
 }
