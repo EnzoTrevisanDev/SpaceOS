@@ -19,6 +19,24 @@
 #include "cpu/syscall.h"
 #include "disk/ata.h"
 #include "fs/vfs.h"
+#include "pkg/pkg_install.h"
+#include "drivers/pci.h"
+#include "drivers/acpi.h"
+#include "drivers/hda.h"
+#include "cpu/apic.h"
+#include "cpu/smp.h"
+#include "net/netbuf.h"
+#include "net/rtl8139.h"
+#include "net/ethernet.h"
+#include "net/wifi.h"
+#include "net/tls.h"
+#include "fs/audit.h"
+#include "disk/ahci.h"
+#include "disk/dma.h"
+#include "fs/spacefs.h"
+#include "drivers/usb.h"
+#include "drivers/usbhid.h"
+#include "cpu/secboot.h"
 
 //ponteiro para o buffer VGA
 static unsigned short *vga = (unsigned short *)VGA_BASE;
@@ -142,11 +160,79 @@ void kernel_main(void) {
     else
         write("Sem disco\n");
 
+    /* Disco 1 (slave) para SpaceFS */
+    if (ata_init1() == 0)
+        write("Disco1 ok\n");
+
     vfs_init();
     if (vfs_mounted())
         write("VFS: FAT32 montado\n");
     else
         write("VFS: sem filesystem\n");
+
+    /* DMA para ATA */
+    if (dma_init() == 0)
+        write("DMA ok\n");
+
+    /* AHCI (SATA) */
+    if (ahci_init() == 0)
+        write("AHCI ok\n");
+    else
+        write("AHCI: sem dispositivo\n");
+
+    /* SpaceFS no disco 1 */
+    if (spfs_mount() == 0)
+        write("SpaceFS montado\n");
+
+    pkg_init();
+    write("PKG ok\n");
+
+    /* Audit log */
+    audit_init();
+
+    /* v0.7 Netuno — Hardware Drivers */
+    int n_pci = pci_init();
+    if (n_pci > 0)
+        write("PCI ok\n");
+
+    if (acpi_init() == 0)
+        write("ACPI ok\n");
+    else
+        write("ACPI: sem tabelas\n");
+
+    apic_init();
+    write("APIC ok\n");
+
+    smp_init();
+
+    if (hda_init() == 0)
+        write("HDA ok\n");
+    else
+        write("HDA: sem dispositivo\n");
+
+    /* v0.8 Galaxia — Stack de Rede */
+    netbuf_init();
+    write("Netbuf ok\n");
+
+    if (rtl8139_init() == 0) {
+        rtl8139_set_recv_cb(eth_recv);
+        write("RTL8139 ok\n");
+    } else {
+        write("RTL8139: sem placa\n");
+    }
+
+    wifi_init();
+    if (wifi_disponivel())
+        write("WiFi: chipset detectado\n");
+
+    /* USB EHCI */
+    if (usb_init() == 0)
+        write("USB ok\n");
+    else
+        write("USB: sem EHCI\n");
+
+    /* Secure Boot — verificacao de integridade */
+    secboot_init();
 
     syscall_init();
     write("Syscall ok\n");

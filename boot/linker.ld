@@ -4,6 +4,7 @@ SECTIONS
     . = 1M;       /* carrega tudo a partir de 1MB de RAM */
 
     .text ALIGN(4K) : {
+        _start = .;     /* inicio do kernel (para secboot) */
         *(.multiboot)   /* cabecalho Multiboot PRIMEIRO — o GRUB procura aqui */
         *(.text)        /* resto do codigo executavel */
     }

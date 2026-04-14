@@ -2,6 +2,8 @@
 #include "../cpu/idt.h"
 #include "../proc/processo.h"
 #include "../shell/shell.h"
+#include "../pkg/pkg_install.h"
+#include "../pkg/pkg_db.h"
 
 /* O handler recebe os registradores empurrados pelo Assembly
    EAX = numero da syscall
@@ -44,6 +46,18 @@ void syscall_handler(void) {
             __asm__ volatile ("mov %0, %%eax" : : "r"(pid));
             break;
         }
+
+        case SYS_PKG_INSTALL:
+            if (ebx) pkg_install((const char *)ebx);
+            break;
+
+        case SYS_PKG_REMOVE:
+            if (ebx) pkg_remove((const char *)ebx);
+            break;
+
+        case SYS_PKG_LIST:
+            pkg_list();
+            break;
 
         default:
             shell_write("[syscall] numero desconhecido: ");

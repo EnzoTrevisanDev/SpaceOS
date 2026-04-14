@@ -79,6 +79,12 @@ void shell_set_cor(unsigned char c) {
 }
 
 
+void shell_write_hex(uint32_t v) {
+    shell_write("0x");
+    for (int i = 7; i >= 0; i--)
+        shell_write_char("0123456789ABCDEF"[(v >> (i * 4)) & 0xF]);
+}
+
 void shell_write_num(uint32_t n){
     if (n == 0){ shell_write_char('0'); return;}
     char buf[12];

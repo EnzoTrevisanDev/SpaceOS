@@ -389,3 +389,27 @@ int vfs_chdir(const char *path) {
     cwd.path[255] = '\0';
     return 0;
 }
+
+/* -----------------------------------------------------------------------
+ * vfs_append — adiciona dados ao final de arquivo (max 16KB)
+ * ----------------------------------------------------------------------- */
+#define VFS_APPEND_MAX 16384
+static uint8_t vfs_append_buf[VFS_APPEND_MAX];
+
+int vfs_append(const char *path, const uint8_t *data, uint32_t size) {
+    if (!cwd.montado || size == 0) return -1;
+
+    uint32_t existing = 0;
+    vfs_entry_t e;
+    if (vfs_open(path, &e) == 0 && !e.is_dir) {
+        existing = e.size;
+        if (existing > VFS_APPEND_MAX - size)
+            existing = VFS_APPEND_MAX - size;
+        if (existing > 0)
+            vfs_read(path, vfs_append_buf, existing);
+    }
+
+    if (existing + size > VFS_APPEND_MAX) size = VFS_APPEND_MAX - existing;
+    k_memcpy(vfs_append_buf + existing, data, size);
+    return vfs_write(path, vfs_append_buf, existing + size);
+}

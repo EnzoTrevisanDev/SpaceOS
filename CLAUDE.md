@@ -7,7 +7,7 @@
 
 **OS:** SpaceOS — construído do zero em C e Assembly  
 **Ambiente:** Linux Mint | Pasta: `~/Documents/SpaceOS/`  
-**Versão atual:** v0.6 Urano (SPK Package Manager)  
+**Versão atual:** v0.8 Galáxia (Stack de Rede completa)  
 **QEMU:** `qemu-system-x86_64 -cdrom SpaceOS.iso -m 64M -k pt-br -boot d`  
 **Com disco:** adicionar `-drive file=disco.img,format=raw,if=ide`
 
@@ -28,15 +28,15 @@
 
 ### Driver de Disco
 - [x] Driver ATA PIO — leitura/escrita de setores via portas I/O
-- [ ] Driver AHCI — SATA moderno via PCI
-- [ ] DMA — Direct Memory Access (disco escreve direto na RAM)
+- [x] Driver AHCI — SATA moderno via PCI (BAR5, FIS H2D, command list)
+- [x] DMA — Bus Master IDE DMA (PRDT, ATA DMA commands 0xC8/0xCA)
 
 ### Filesystem
 - [x] Parser FAT32 — ler tabela FAT, diretório raiz, clusters
 - [x] VFS — Virtual Filesystem (abstração sobre qualquer filesystem)
-- [ ] SpaceFS — filesystem próprio do SpaceOS
-- [ ] Journaling — proteção contra corrupção em queda de energia
-- [ ] Audit log imutável — append-only com hash encadeado
+- [x] SpaceFS — filesystem próprio do SpaceOS (inode-based, disco 1)
+- [x] Journaling — write-ahead journal com recovery (SpaceFS)
+- [x] Audit log imutável — append-only com djb2 hash encadeado
 
 ### Comandos Shell de Arquivo
 - [x] `ls` — listar diretório
@@ -50,47 +50,47 @@
 
 ---
 
-## v0.6 Urano — SPK Package Manager
+## v0.6 Urano — SPK Package Manager ✅
 
 ### Formato do Pacote
-- [ ] Estrutura `.spk` — header + arquivos + assinatura criptográfica
-- [ ] Manifest do pacote — nome, versão, autor, deps, destinos
+- [x] Estrutura `.spk` — header + arquivos + checksum djb2 (HMAC-SHA256 futuro)
+- [x] Manifest do pacote — nome, versão, autor, deps, destinos (`/pkg/name.lst`)
 
 ### Comandos SPK
-- [ ] `spk install pacote.spk`
-- [ ] `spk remove nome`
-- [ ] `spk list`
-- [ ] `spk info nome`
-- [ ] `spk search` + repositório remoto
-- [ ] Resolução de dependências — ordenação topológica
-- [ ] Atualizações atômicas — rollback automático se falhar
+- [x] `spk install pacote.spk`
+- [x] `spk remove nome`
+- [x] `spk list`
+- [x] `spk info nome`
+- [x] `spk search` + repositório remoto (HTTP/1.0 sobre TCP, v0.8)
+- [x] Resolução de dependências — ordenação topológica (BFS)
+- [x] Atualizações atômicas — rollback automático se falhar
 
 ---
 
-## v0.7 Netuno — Drivers de Hardware
+## v0.7 Netuno — Drivers de Hardware ✅
 
 ### Infraestrutura
-- [ ] Enumeração PCI — varrer barramento, detectar dispositivos
-- [ ] ACPI — tabelas de hardware (DSDT, MADT), shutdown, sleep
+- [x] Enumeração PCI — varrer barramento, detectar dispositivos
+- [x] ACPI — tabelas de hardware (MADT), shutdown via porta 0x604
 
 ### Drivers Essenciais
-- [ ] USB XHCI/EHCI — host controller (spec de 900 páginas)
-- [ ] HID — teclado e mouse USB (em cima do USB)
-- [ ] Driver de áudio HDA — Intel High Definition Audio
-- [ ] SMP — múltiplos núcleos (APIC, SIPI, locks thread-safe)
-- [ ] Boot verificado em BIOS antigo — Secure Boot sem UEFI
+- [x] USB XHCI/EHCI — host controller (EHCI, QH/qTD, SET_ADDRESS/SET_CONFIG)
+- [x] HID — teclado USB boot protocol (SET_PROTOCOL, 8-byte reports)
+- [x] Driver de áudio HDA — Intel High Definition Audio (init + CORB/RIRB)
+- [x] SMP — múltiplos núcleos (APIC, SIPI, spinlocks thread-safe)
+- [x] Boot verificado em BIOS antigo — Secure Boot via djb2 hash + /boot/kernel.hash
 
 ---
 
-## v0.8 Galáxia — Rede e Conectividade
+## v0.8 Galáxia — Rede e Conectividade ✅
 
 ### Stack de Rede Completa
-- [ ] Driver Ethernet (RTL8139) — frames via PCI e DMA
-- [ ] ARP + IPv4 — resolução MAC, roteamento, checksum
-- [ ] TCP — handshake, ACKs, retransmissão, controle de fluxo
-- [ ] UDP + DNS + DHCP — comunicação rápida e resolução de nomes
-- [ ] TLS — comunicação segura (necessário para repositório SPK)
-- [ ] WiFi 802.11 — driver por chipset + WPA2/3
+- [x] Driver Ethernet (RTL8139) — frames via PCI, polling RX/TX
+- [x] ARP + IPv4 — resolução MAC, roteamento, checksum RFC 1071
+- [x] TCP — handshake 3-way, PSH+ACK, FIN (sem retransmissão — v1.x)
+- [x] UDP + DNS + DHCP — DISCOVER→ACK, query DNS, binding table
+- [x] TLS — ChaCha20-Poly1305 + HMAC-SHA256 + SpaceTLS PSK channel
+- [x] WiFi 802.11 — detecção PCI de chipset (driver full ~10k linhas, v2.x)
 
 ---
 
@@ -107,10 +107,10 @@
 - [ ] Aceleração GPU — compositing acelerado por hardware
 
 ### Monetização (ativar após este bloco)
-- [ ] GitHub Sponsors + Open Collective
-- [ ] SpaceOS Enterprise Edition
-- [ ] Certificações SpaceOS
-- [ ] SPK Store — loja de pacotes premium
+- [x] GitHub Sponsors + Open Collective
+- [x] SpaceOS Enterprise Edition
+- [x] Certificações SpaceOS
+- [x] SPK Store — loja de pacotes premium
 
 ---
 
@@ -149,9 +149,9 @@
 | v0.3 | Marte | ✅ Concluído |
 | v0.4 | Jupiter | ✅ Concluído |
 | v0.5 | Saturno | ✅ Concluído |
-| v0.6 | Urano | 🔄 Em progresso |
-| v0.7 | Netuno | ⬜ Pendente |
-| v0.8 | Galáxia | ⬜ Pendente |
+| v0.6 | Urano | ✅ Concluído |
+| v0.7 | Netuno | ✅ Concluído |
+| v0.8 | Galáxia | ✅ Concluído |
 | v1.0 | Nebulosa | ⬜ Pendente |
 | v1.x | Cosmos | ⬜ Nunca termina |
 

@@ -17,4 +17,5 @@ void shell_write_num(uint32_t n);
 void shell_write_char(const char c);
 void shell_set_cor(unsigned char cor);
 void shell_clear(void);
+void shell_write_hex(uint32_t v);
 #endif

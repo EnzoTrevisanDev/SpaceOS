@@ -61,4 +61,8 @@ int vfs_chdir(const char *path);
 /* vfs_mounted — retorna 1 se filesystem esta montado, 0 se nao. */
 int vfs_mounted(void);
 
+/* vfs_append — adiciona dados ao final de um arquivo (cria se nao existe).
+   Limite interno de 16KB por arquivo de log. Retorna 0 ok, -1 erro. */
+int vfs_append(const char *path, const uint8_t *data, uint32_t size);
+
 #endif

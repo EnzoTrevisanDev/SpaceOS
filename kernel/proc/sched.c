@@ -1,9 +1,13 @@
 #include "sched.h"
 #include "processo.h"
 #include "../shell/shell.h"
+#include "../cpu/spinlock.h"
 
 static uint32_t ticks = 0;
-static uint32_t creditos_atuais = 0;  /* creditos restantes do processo atual */
+static uint32_t creditos_atuais = 0;
+
+/* Lock para proteger a fila de processos em sistemas SMP */
+spinlock_t sched_lock = SPINLOCK_INIT;  /* creditos restantes do processo atual */
 
 uint32_t sched_ticks(void) { return ticks; }
 
@@ -56,8 +60,9 @@ static processo_t *escolher_proximo(processo_t *atual) {
 uint32_t sched_tick(uint32_t esp_atual) {
     ticks++;
 
+    spin_lock(&sched_lock);
     processo_t *atual = proc_atual();
-    if (!atual) return esp_atual;
+    if (!atual) { spin_unlock(&sched_lock); return esp_atual; }
 
     /* Salva ESP do processo atual */
     atual->ctx.esp = esp_atual;
@@ -66,11 +71,11 @@ uint32_t sched_tick(uint32_t esp_atual) {
     if (creditos_atuais > 0) creditos_atuais--;
 
     /* Se ainda tem creditos, continua rodando */
-    if (creditos_atuais > 0) return esp_atual;
+    if (creditos_atuais > 0) { spin_unlock(&sched_lock); return esp_atual; }
 
     /* Sem creditos — escolhe o proximo */
     processo_t *proximo = escolher_proximo(atual);
-    if (!proximo) return esp_atual;
+    if (!proximo) { spin_unlock(&sched_lock); return esp_atual; }
 
     /* Troca */
     if (atual->estado == PROC_RUNNING)
@@ -80,6 +85,7 @@ uint32_t sched_tick(uint32_t esp_atual) {
     creditos_atuais   = proximo->creditos;
     proc_set_atual(proximo);
 
+    spin_unlock(&sched_lock);
     return proximo->ctx.esp;
 }
 

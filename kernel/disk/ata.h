@@ -27,13 +27,19 @@
 /* Tamanho de um setor em bytes */
 #define SETOR_SIZE 512
 
-/* Inicializa e detecta o disco */
+/* Inicializa e detecta o disco 0 (master) */
 int  ata_init(void);
 
-/* Le count setores a partir do LBA para o buffer */
+/* Le count setores a partir do LBA para o buffer (disco 0) */
 int  ata_ler(uint32_t lba, uint8_t count, uint8_t *buffer);
 
-/* Grava count setores a partir do LBA do buffer */
+/* Grava count setores a partir do LBA do buffer (disco 0) */
 int  ata_gravar(uint32_t lba, uint8_t count, uint8_t *buffer);
+
+/* Disco 1 (slave no canal primario) */
+int  ata_init1(void);
+int  ata_presente1(void);
+int  ata_ler1(uint32_t lba, uint8_t count, uint8_t *buffer);
+int  ata_gravar1(uint32_t lba, uint8_t count, uint8_t *buffer);
 
 #endif

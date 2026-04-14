@@ -46,7 +46,8 @@ static int ata_esperar_drq(void) {
     }
 }
 
-static int disco_presente = 0;
+static int disco_presente  = 0;
+static int disco1_presente = 0;  /* slave drive (disco 1) */
 
 int ata_init(void) {
     /* Envia comando de identificacao para ver se existe disco */
@@ -75,6 +76,73 @@ int ata_init(void) {
         in_word(ATA_DATA);
 
     disco_presente = 1;
+    return 0;
+}
+
+/* ---- Disco 1 (slave no canal primario) --------------------------------- */
+
+int ata_init1(void) {
+    /* Seleciona slave */
+    out_byte(ATA_DRIVE, 0xB0);
+    out_byte(ATA_SETOR_COUNT, 0);
+    out_byte(ATA_LBA_LOW,  0);
+    out_byte(ATA_LBA_MID,  0);
+    out_byte(ATA_LBA_HIGH, 0);
+    out_byte(ATA_CMD, ATA_CMD_ID);
+
+    uint8_t status = in_byte(ATA_STATUS);
+    if (status == 0 || status == 0xFF) { disco1_presente = 0; return -1; }
+
+    if (ata_esperar_pronto() < 0) { disco1_presente = 0; return -1; }
+
+    /* Verifica assinatura SATA/ATAPI — skip se nao for ATA */
+    uint8_t mid = in_byte(ATA_LBA_MID);
+    uint8_t hi  = in_byte(ATA_LBA_HIGH);
+    if (mid != 0 || hi != 0) { disco1_presente = 0; return -1; } /* ATAPI/nao-ATA */
+
+    for (int i = 0; i < 256; i++) in_word(ATA_DATA);
+
+    disco1_presente = 1;
+    return 0;
+}
+
+int ata_presente1(void) { return disco1_presente; }
+
+int ata_ler1(uint32_t lba, uint8_t count, uint8_t *buffer) {
+    if (!disco1_presente || !buffer || count == 0) return -1;
+    if (ata_esperar_pronto() < 0) return -1;
+
+    out_byte(ATA_DRIVE,       0xF0 | ((lba >> 24) & 0x0F));  /* slave + LBA */
+    out_byte(ATA_SETOR_COUNT, count);
+    out_byte(ATA_LBA_LOW,     (uint8_t)(lba & 0xFF));
+    out_byte(ATA_LBA_MID,     (uint8_t)((lba >> 8) & 0xFF));
+    out_byte(ATA_LBA_HIGH,    (uint8_t)((lba >> 16) & 0xFF));
+    out_byte(ATA_CMD, ATA_CMD_READ);
+
+    for (int s = 0; s < count; s++) {
+        if (ata_esperar_drq() < 0) return -1;
+        uint16_t *buf16 = (uint16_t *)(buffer + s * SETOR_SIZE);
+        for (int i = 0; i < 256; i++) buf16[i] = in_word(ATA_DATA);
+    }
+    return 0;
+}
+
+int ata_gravar1(uint32_t lba, uint8_t count, uint8_t *buffer) {
+    if (!disco1_presente || !buffer || count == 0) return -1;
+    if (ata_esperar_pronto() < 0) return -1;
+
+    out_byte(ATA_DRIVE,       0xF0 | ((lba >> 24) & 0x0F));
+    out_byte(ATA_SETOR_COUNT, count);
+    out_byte(ATA_LBA_LOW,     (uint8_t)(lba & 0xFF));
+    out_byte(ATA_LBA_MID,     (uint8_t)((lba >> 8) & 0xFF));
+    out_byte(ATA_LBA_HIGH,    (uint8_t)((lba >> 16) & 0xFF));
+    out_byte(ATA_CMD, ATA_CMD_WRITE);
+
+    for (int s = 0; s < count; s++) {
+        if (ata_esperar_drq() < 0) return -1;
+        uint16_t *buf16 = (uint16_t *)(buffer + s * SETOR_SIZE);
+        for (int i = 0; i < 256; i++) out_word(ATA_DATA, buf16[i]);
+    }
     return 0;
 }
 
